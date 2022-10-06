@@ -4,6 +4,100 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+from glob import glob
+TRAIN_DATA_FOLDER = '/home/est_posgrado_manuel.suarez/data/dogs-vs-cats/train5000'
+TEST_DATA_FOLDER = '/home/est_posgrado_manuel.suarez/data/dogs-vs-cats/train1000'
+# train_dog_files = np.array(glob(os.path.join(DATA_FOLDER, 'dog.*.jpg')))
+# train_cat_files = np.array(glob(os.path.join(DATA_FOLDER, 'cat.*.jpg')))
+train_dogs_files = np.array(glob(os.path.join(TRAIN_DATA_FOLDER, 'dog.*.jpg')))
+train_cats_files = np.array(glob(os.path.join(TRAIN_DATA_FOLDER, 'cat.*.jpg')))
+test_dogs_files = np.array(glob(os.path.join(TEST_DATA_FOLDER, 'dog.*.jpg')))
+test_cats_files = np.array(glob(os.path.join(TEST_DATA_FOLDER, 'cat.*.jpg')))
+
+train_dogs = tf.data.Dataset.list_files(train_dogs_files)
+train_cats = tf.data.Dataset.list_files(train_cats_files)
+test_dogs = tf.data.Dataset.list_files(test_dogs_files)
+test_cats = tf.data.Dataset.list_files(test_cats_files)
+
+# Define the standard image size.
+orig_img_size = (286, 286)
+# Size of the random crops to be used during training.
+input_img_size = (256, 256, 3)
+# Weights initializer for the layers.
+kernel_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
+# Gamma initializer for instance normalization.
+gamma_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
+
+batch_size = 1
+
+def normalize_img(img):
+    img = tf.cast(img, dtype=tf.float32)
+    # Map values in the range [-1, 1]
+    return (img / 127.5) - 1.0
+
+
+def preprocess_train_image(img):
+    # Load image
+    img = tf.io.read_file(img)
+    # Decode
+    img = tf.image.decode_jpeg(img)
+    # Random flip
+    img = tf.image.random_flip_left_right(img)
+    # Resize to the original size first
+    img = tf.image.resize(img, [*orig_img_size])
+    # Random crop to 256X256
+    img = tf.image.random_crop(img, size=[*input_img_size])
+    # Normalize the pixel values in the range [-1, 1]
+    img = normalize_img(img)
+    return img
+
+
+def preprocess_test_image(img):
+    # Load image
+    img = tf.io.read_file(img)
+    # Decode
+    img = tf.image.decode_jpeg(img)
+    # Only resizing and normalization for the test images.
+    img = tf.image.resize(img, [input_img_size[0], input_img_size[1]])
+    img = normalize_img(img)
+    return img
+
+# Create datasets
+autotune = tf.data.AUTOTUNE
+
+# Apply the preprocessing operations to the training data
+TRAIN_BUFFER_SIZE = len(train_dogs_files)
+train_dogs = (
+    train_dogs.map(preprocess_train_image, num_parallel_calls=autotune)
+    .cache()
+    .shuffle(TRAIN_BUFFER_SIZE)
+    .batch(batch_size)
+)
+train_cats = (
+    train_cats.map(preprocess_train_image, num_parallel_calls=autotune)
+    .cache()
+    .shuffle(TRAIN_BUFFER_SIZE)
+    .batch(batch_size)
+)
+
+# Apply the preprocessing operations to the test data
+TEST_BUFFER_SIZE = len(test_dogs_files)
+test_dogs = (
+    test_dogs.map(preprocess_test_image, num_parallel_calls=autotune)
+    .cache()
+    .shuffle(TEST_BUFFER_SIZE)
+    .batch(batch_size)
+)
+test_cats = (
+    test_cats.map(preprocess_test_image, num_parallel_calls=autotune)
+    .cache()
+    .shuffle(TEST_BUFFER_SIZE)
+    .batch(batch_size)
+)
+
+train_dataset = tf.data.Dataset.zip((train_dogs, train_cats))
+test_dataset = tf.data.Dataset.zip((test_dogs, test_cats))
+
 # Sampling Layer
 class Sampling(layers.Layer):
     """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
@@ -89,7 +183,7 @@ mnist_digits = np.expand_dims(mnist_digits, -1).astype("float32") / 255
 
 vae = VAE(encoder, decoder)
 vae.compile(optimizer=keras.optimizers.Adam())
-vae.fit(mnist_digits, epochs=30, batch_size=128)
+vae.fit(test_dogs, epochs=30, batch_size=128)
 
 # Plot latent space
 import matplotlib.pyplot as plt
