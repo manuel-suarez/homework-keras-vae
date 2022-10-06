@@ -126,7 +126,7 @@ def plot_latent_space(vae, n=30, figsize=15):
     plt.xlabel("z[0]")
     plt.ylabel("z[1]")
     plt.imshow(figure, cmap="Greys_r")
-    plt.show()
+    plt.savefig("figure1.png")
 
 
 plot_latent_space(vae)
