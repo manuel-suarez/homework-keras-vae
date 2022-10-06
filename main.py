@@ -128,8 +128,8 @@ encoder.summary()
 
 # Decoder
 latent_inputs = keras.Input(shape=(latent_dim,))
-x = layers.Dense(7 * 7 * 64, activation="relu")(latent_inputs)
-x = layers.Reshape((7, 7, 64))(x)
+x = layers.Dense(7 * 7 * 256, activation="relu")(latent_inputs)
+x = layers.Reshape((7, 7, 256))(x)
 x = layers.Conv2DTranspose(256, 3, activation="relu", strides=2, padding="same")(x)
 x = layers.Conv2DTranspose(128, 3, activation="relu", strides=2, padding="same")(x)
 x = layers.Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
@@ -159,9 +159,11 @@ class VAE(keras.Model):
         ]
 
     def train_step(self, data):
+        print(data)
         with tf.GradientTape() as tape:
             z_mean, z_log_var, z = self.encoder(data)
             reconstruction = self.decoder(z)
+            print(reconstruction)
             reconstruction_loss = tf.reduce_mean(
                 tf.reduce_sum(
                     keras.losses.binary_crossentropy(data, reconstruction), axis=(1, 2)
