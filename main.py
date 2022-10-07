@@ -23,7 +23,7 @@ test_cats = tf.data.Dataset.list_files(test_cats_files)
 # Define the standard image size.
 orig_img_size = (286, 286)
 # Size of the random crops to be used during training.
-input_img_size = (256, 256, 3)
+input_img_size = (28, 28, 3)
 # Weights initializer for the layers.
 kernel_init = keras.initializers.RandomNormal(mean=0.0, stddev=0.02)
 # Gamma initializer for instance normalization.
