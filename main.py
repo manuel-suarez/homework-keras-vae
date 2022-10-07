@@ -45,9 +45,11 @@ def preprocess_train_image(img):
     # Random flip
     img = tf.image.random_flip_left_right(img)
     # Resize to the original size first
-    img = tf.image.resize(img, [*orig_img_size])
+    #img = tf.image.resize(img, [*orig_img_size])
+    image = tf.image.resize(img, [286, 286],
+                            method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     # Random crop to 256X256
-    img = tf.image.random_crop(img, size=[*input_img_size])
+    img = tf.image.random_crop(img, size=[28, 28, 3])
     # Normalize the pixel values in the range [-1, 1]
     img = normalize_img(img)
     return img
